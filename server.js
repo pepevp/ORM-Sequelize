@@ -1,6 +1,8 @@
 import express from "express";
+import initModels from "./models/init-models.js";
 import productoRoutes from "./routes/productosRoutes.js";
 import { sequelize } from "./config/db.js";
+const models = initModels(sequelize);
 const app = express();
 app.use(express.json());
 // Rutas
