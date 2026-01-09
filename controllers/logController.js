@@ -24,7 +24,7 @@ export const obtenerLog = async (req, res) => {
     if (!log) return res.status(404).json({ mensaje: "No encontrado" });
     res.json(log);
   } catch (error) {
-    res.status(500).json({ mensaje: "Error al obtener producto", error });
+    res.status(500).json({ mensaje: "Error al obtener log", error });
   }
 };
 // UPDATE
@@ -35,7 +35,7 @@ export const actualizarLog = async (req, res) => {
     await log.update(req.body);
     res.json(log);
   } catch (error) {
-    res.status(500).json({ mensaje: "Error al actualizar producto", error });
+    res.status(500).json({ mensaje: "Error al actualizar log", error });
   }
 };
 // DELETE
