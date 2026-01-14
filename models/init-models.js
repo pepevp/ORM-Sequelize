@@ -1,18 +1,21 @@
-var DataTypes = require("sequelize").DataTypes;
-var _categorias = require("./categorias");
-var _clientes = require("./clientes");
-var _detalles_pedido = require("./detalles_pedido");
-var _log = require("./log");
-var _pedidos = require("./pedidos");
-var _productos = require("./productos");
+import _sequelize from "sequelize";
+const DataTypes = _sequelize.DataTypes;
+import _categorias from  "./categorias.js";
+import _clientes from  "./clientes.js";
+import _detalles_pedido from  "./detalles_pedido.js";
+import _log from  "./log.js";
+import _log5 from  "./log5.js";
+import _pedidos from  "./pedidos.js";
+import _productos from  "./productos.js";
 
-function initModels(sequelize) {
-  var categorias = _categorias(sequelize, DataTypes);
-  var clientes = _clientes(sequelize, DataTypes);
-  var detalles_pedido = _detalles_pedido(sequelize, DataTypes);
-  var log = _log(sequelize, DataTypes);
-  var pedidos = _pedidos(sequelize, DataTypes);
-  var productos = _productos(sequelize, DataTypes);
+export default function initModels(sequelize) {
+  const categorias = _categorias.init(sequelize, DataTypes);
+  const clientes = _clientes.init(sequelize, DataTypes);
+  const detalles_pedido = _detalles_pedido.init(sequelize, DataTypes);
+  const log = _log.init(sequelize, DataTypes);
+  const log5 = _log5.init(sequelize, DataTypes);
+  const pedidos = _pedidos.init(sequelize, DataTypes);
+  const productos = _productos.init(sequelize, DataTypes);
 
   pedidos.belongsTo(clientes, { as: "cliente", foreignKey: "cliente_id"});
   clientes.hasMany(pedidos, { as: "pedidos", foreignKey: "cliente_id"});
@@ -26,10 +29,8 @@ function initModels(sequelize) {
     clientes,
     detalles_pedido,
     log,
+    log5,
     pedidos,
     productos,
   };
 }
-module.exports = initModels;
-module.exports.initModels = initModels;
-module.exports.default = initModels;

@@ -1,19 +1,13 @@
-// routes/categoriasRoutes.js
+
 import express from "express";
-import {
-  crearCategoria,
-  obtenerCategorias,
-  obtenerCategoria,
-  actualizarCategoria,
-  eliminarCategoria
-} from "../controllers/categoriasController.js";
+import { categoriasController } from "../controllers/categoriasController.js";
 
 const router = express.Router();
 
-router.get("/", obtenerCategorias);
-router.get("/:id", obtenerCategoria);
-router.post("/", crearCategoria);
-router.put("/:id", actualizarCategoria);
-router.delete("/:id", eliminarCategoria);
+router.get("/", categoriasController.getAll);
+router.get("/:id", categoriasController.getOne);
+router.post("/", categoriasController.create);
+router.put("/:id", categoriasController.update);
+router.delete("/:id", categoriasController.delete);
 
 export default router;

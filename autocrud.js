@@ -1,119 +1,77 @@
-// autocrud.js
 import fs from "fs";
 import path from "path";
 
-const modelsPath = "./models";
-const controllersPath = "./controllers";
-const routesPath = "./routes";
+const paths = {
+    models: "./models",
+    services: "./services",
+    controllers: "./controllers",
+    routes: "./routes"
+};
 
-fs.mkdirSync(controllersPath, { recursive: true });
-fs.mkdirSync(routesPath, { recursive: true });
+// Crear carpetas si no existen
+Object.values(paths).forEach(p => fs.mkdirSync(p, { recursive: true }));
 
-// Filtramos solo los modelos (sin incluir init-models.js)
-const models = fs.readdirSync(modelsPath)
-  .filter(f => f.endsWith(".js") && f !== "init-models.js");
+const models = fs.readdirSync(paths.models)
+    .filter(f => f.endsWith(".js") && f !== "init-models.js");
 
 for (const modelFile of models) {
-  const modelName = path.basename(modelFile, ".js"); // ejemplo: productos
-  const modelClass = modelName.charAt(0).toUpperCase() + modelName.slice(1); // Productos
-  const singular = modelName.replace(/s$/, ""); // producto, cliente, pedido, etc.
+    const name = path.basename(modelFile, ".js"); // ej: productos
+    const className = name.charAt(0).toUpperCase() + name.slice(1); // ej: Productos
 
-  // ---------- CONTROLADOR ----------
-  const controllerContent = `// controllers/${modelName}Controller.js
+    // ---------- 1. GENERAR SERVICIO ----------
+    const serviceContent = `
 import { sequelize } from "../config/db.js";
-import ${modelName} from "../models/${modelFile}";
-import { DataTypes } from "sequelize";
+import initModels from "../models/init-models.js";
+const models = initModels(sequelize);
+const Model = models.${name};
 
-// 🔧 Inicializamos el modelo con la conexión activa
-const ${modelClass.slice(0, -1)} = ${modelName}.init(sequelize, DataTypes);
+export const ${name}Service = {
+    findAll: async () => await Model.findAll(),
+    findByPk: async (id) => await Model.findByPk(id),
+    create: async (data) => await Model.create(data),
+    update: async (id, data) => {
+        const item = await Model.findByPk(id);
+        if (item) return await item.update(data);
+        return null;
+    },
+    delete: async (id) => {
+        const item = await Model.findByPk(id);
+        if (item) return await item.destroy();
+        return null;
+    }
+};`;
+    fs.writeFileSync(`${paths.services}/${name}Service.js`, serviceContent);
 
-// CREATE
-export const crear${modelClass.slice(0, -1)} = async (req, res) => {
-  try {
-    const nuevo = await ${modelClass.slice(0, -1)}.create(req.body);
-    res.status(201).json(nuevo);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ mensaje: "Error al crear ${singular}", error });
-  }
-};
+    // ---------- 2. GENERAR CONTROLADOR (Herencia) ----------
+    const controllerContent = `
+import { BaseController } from "../controllersBase/BaseController.js";
+import { ${name}Service } from "../services/${name}Service.js";
 
-// READ (todos)
-export const obtener${modelClass} = async (req, res) => {
-  try {
-    const lista = await ${modelClass.slice(0, -1)}.findAll();
-    res.json(lista);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ mensaje: "Error al obtener ${modelName}", error });
-  }
-};
+class ${className}Controller extends BaseController {
+    constructor() {
+        super(${name}Service);
+    }
+    // Aquí puedes añadir métodos personalizados más adelante
+}
 
-// READ (uno)
-export const obtener${modelClass.slice(0, -1)} = async (req, res) => {
-  try {
-    const item = await ${modelClass.slice(0, -1)}.findByPk(req.params.id);
-    if (!item) return res.status(404).json({ mensaje: "No encontrado" });
-    res.json(item);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ mensaje: "Error al obtener ${singular}", error });
-  }
-};
+export const ${name}Controller = new ${className}Controller();`;
+    fs.writeFileSync(`${paths.controllers}/${name}Controller.js`, controllerContent);
 
-// UPDATE
-export const actualizar${modelClass.slice(0, -1)} = async (req, res) => {
-  try {
-    const item = await ${modelClass.slice(0, -1)}.findByPk(req.params.id);
-    if (!item) return res.status(404).json({ mensaje: "No encontrado" });
-    await item.update(req.body);
-    res.json(item);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ mensaje: "Error al actualizar ${singular}", error });
-  }
-};
-
-// DELETE
-export const eliminar${modelClass.slice(0, -1)} = async (req, res) => {
-  try {
-    const item = await ${modelClass.slice(0, -1)}.findByPk(req.params.id);
-    if (!item) return res.status(404).json({ mensaje: "No encontrado" });
-    await item.destroy();
-    res.json({ mensaje: "${modelClass.slice(0, -1)} eliminado correctamente" });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ mensaje: "Error al eliminar ${singular}", error });
-  }
-};
-`;
-
-  fs.writeFileSync(`${controllersPath}/${modelName}Controller.js`, controllerContent);
-
-  // ---------- RUTA ----------
-  const routeContent = `// routes/${modelName}Routes.js
+    // ---------- 3. GENERAR RUTA ----------
+    const routeContent = `
 import express from "express";
-import {
-  crear${modelClass.slice(0, -1)},
-  obtener${modelClass},
-  obtener${modelClass.slice(0, -1)},
-  actualizar${modelClass.slice(0, -1)},
-  eliminar${modelClass.slice(0, -1)}
-} from "../controllers/${modelName}Controller.js";
+import { ${name}Controller } from "../controllers/${name}Controller.js";
 
 const router = express.Router();
 
-router.get("/", obtener${modelClass});
-router.get("/:id", obtener${modelClass.slice(0, -1)});
-router.post("/", crear${modelClass.slice(0, -1)});
-router.put("/:id", actualizar${modelClass.slice(0, -1)});
-router.delete("/:id", eliminar${modelClass.slice(0, -1)});
+router.get("/", ${name}Controller.getAll);
+router.get("/:id", ${name}Controller.getOne);
+router.post("/", ${name}Controller.create);
+router.put("/:id", ${name}Controller.update);
+router.delete("/:id", ${name}Controller.delete);
 
-export default router;
-`;
+export default router;`;
+    fs.writeFileSync(`${paths.routes}/${name}Routes.js`, routeContent);
 
-  fs.writeFileSync(`${routesPath}/${modelName}Routes.js`, routeContent);
-  console.log(`✅ CRUD generado para: ${modelName}`);
+    console.log(`✅ Estructura MVC generada para: ${name}`);
 }
-
-console.log("🎉 Todos los controladores y rutas han sido generados correctamente.");
